@@ -36,11 +36,10 @@ to edit or translate a Powerpoint file is a three-step process:
 Here's an example involving a presentation called
 [`MyDeck.pptx`](example/MyDeck.pptx),
 which contains two slides and has a couple of text boxes
-and a graph:
+and a table:
 
-
-![MyDesk_Slide1.png](examples/MyDesk_Slide1.png)
-![MyDesk_Slide2.png](examples/MyDesk_Slide2.png)
+<a href="examples/MyDesk_Slide1.png"><img src="examples/MyDesk_Slide1.png"></a>
+<a href="examples/MyDesk_Slide2.png"><img src="examples/MyDesk_Slide2.png"></a>
 
 ### Step 1: Extract text strings
 
