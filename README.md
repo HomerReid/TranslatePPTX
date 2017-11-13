@@ -110,42 +110,35 @@ TEXT_STRING 7 0 (table)
 Name
 ==================================================
 
-
 TEXT_STRING 8 0 (table)
 ==================================================
 Lifespan
 ==================================================
-
 
 TEXT_STRING 9 0 (table)
 ==================================================
 Masterpiece
 ==================================================
 
-
 TEXT_STRING 10 0 (table)
 ==================================================
 Bach
 ==================================================
-
 
 TEXT_STRING 11 0 (table)
 ==================================================
 1685-1750
 ==================================================
 
-
 TEXT_STRING 12 0 (table)
 ==================================================
 BWV 140, Wachet auf, ruft uns die Stimme
 ==================================================
 
-
 TEXT_STRING 13 0 (table)
 ==================================================
 Mozart
 ==================================================
-
 
 TEXT_STRING 14 0 (table)
 ==================================================
@@ -166,7 +159,19 @@ Slide with graph
 
 Note the following points here:
 
-** 
+1. Each text string appears between two separator
+strings comprised of equals signs (`======.....=====`),
+prepended by an identifier string of the form
+`TEXT_STRING M N` where `M` and `N` are integers.
+
+2. Some text strings seem to be appearing *twice*;
+for example, the text "Huge red Courier font and comic italics"
+appears 
+
+ + once in full with indices `(M,N)=(3,0),` and
+
+ + a second time split into three pieces with indices
+   `(M,N)=(3,1) (3,2) (3,3)`.
 
 ### Step 2: Edit text strings
 
