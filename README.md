@@ -38,8 +38,8 @@ Here's an example involving a presentation called
 which contains two slides and has a couple of text boxes
 and a table:
 
-<a href="examples/MyDesk_Slide1.png"><img src="examples/MyDesk_Slide1.png"></a>
-<a href="examples/MyDesk_Slide2.png"><img src="examples/MyDesk_Slide2.png"></a>
+<a href="example/MyDesk_Slide1.png"><img src="example/MyDesk_Slide1.png"></a>
+<a href="example/MyDesk_Slide2.png"><img src="example/MyDesk_Slide2.png"></a>
 
 ### Step 1: Extract text strings
 
