@@ -71,6 +71,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
         public static final String TEXT_SEPARATOR = "==================================================";
         public static final Map <Dimension, String> Translations = new HashMap<Dimension, String>();
         public static boolean Verbose=false;
+        public static boolean WideOnly=false;
         public static FileWriter LogFile=null;
         public static FileWriter TextFile=null;
 
@@ -95,6 +96,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 	   System.err.println(" options: ");
 	   System.err.println("  --Translations Translations.txt");
 	   System.err.println("  --WriteLog");
+	   System.err.println("  --WideOnly");
 	   System.err.println("  --Verbose");
            System.exit(1);
          }
@@ -232,6 +234,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                Verbose=true;
               else if ( args[narg].equalsIgnoreCase("--WriteLog") )
                WriteLog=true;
+              else if ( args[narg].equalsIgnoreCase("--WideOnly") )
+               WideOnly=true;
               else if ( args[narg].equalsIgnoreCase("--Translations") )
                { Mode=ModeValue.TRANSLATE;
                  ReadTranslations(args[narg+1]);
@@ -444,7 +448,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 
              // Skip strings without Japanese text
              String OldText = ts.getText().toString();
-             if ( !HasWideCharacters(OldText) )
+             if ( WideOnly && !HasWideCharacters(OldText) )
               continue;
 
              nText++;
@@ -515,7 +519,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
               for (XSLFTableCell c : r) 
                { 
                  String OldText = c.getText().toString();
-                 if ( !HasWideCharacters(OldText) )
+                 if ( WideOnly && !HasWideCharacters(OldText) )
                   continue;
 
                  nText++;
