@@ -1,0 +1,25 @@
+export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+export JRE_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
+export JAVA=/usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java 
+export JAVAC=/usr/lib/jvm/java-8-openjdk-amd64/bin/javac
+
+export BASE=${HOME}/hacking/poi/build
+
+export CLASSPATH=""
+export CLASSPATH="${CLASSPATH}:.:"
+export CLASSPATH="${CLASSPATH}:${BASE}/classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/examples-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/excelant-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/excelant-test-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/integration-test-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/ooxml-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/ooxml-lite-merged"
+export CLASSPATH="${CLASSPATH}:${BASE}/ooxml-test-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/scratchpad-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/scratchpad-test-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/test-classes"
+export CLASSPATH="${CLASSPATH}:${BASE}/../ooxml-lib/xmlbeans-2.6.0.jar"
+export CLASSPATH="${CLASSPATH}:${BASE}/OtherStuffIDownloaded/openxml4j-1.0-beta.jar"
+export CLASSPATH="${CLASSPATH}:${BASE}/OtherStuffIDownloaded/ooxml-schemas-1.3.jar"
+export CLASSPATH="${CLASSPATH}:${BASE}/OtherStuffIDownloaded/poi-ooxml-3.17.jar"
+export CLASSPATH="${CLASSPATH}:${BASE}/OtherStuffIDownloaded/poi-ooxml-schemas-3.17.jar"
