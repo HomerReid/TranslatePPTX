@@ -252,7 +252,7 @@ the new command-line argument `--Translations`
 used to specify the list of revised text strings:
 
 ````bash
- % java TranslatePPTX.sh MyDeck.pptx --Translations MyDeck.translations
+ % TranslatePPTX.sh MyDeck.pptx --Translations MyDeck.translations
 Wrote translated document to MyDeck_Translated.pptx.
 Thank you for your support.
 ````
