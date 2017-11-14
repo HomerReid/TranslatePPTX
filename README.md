@@ -298,11 +298,13 @@ usage: TranslatePPTX Original.pptx [options]
 The additional options here are:
 
 + `--WriteLog`
-    Requests that TranslatePPTX write a `.log` file explaining what is doing.
-    This is useful for debugging.
+
+    + Requests that TranslatePPTX write a `.log` file explaining what is doing.  This is useful for debugging.
 
 + `--WideOnly`
-    Requests that only text strings containing double-byte characters (i.e. characters in Japanese, Chinese, or other languages) be considered. 
+
+    + Requests that only text strings containing double-byte characters (i.e. characters in Japanese, Chinese, or other languages) be considered. 
+
 <a name="ShapesRuns"></a>
 ## Text shapes vs. text runs
 
