@@ -45,11 +45,11 @@ and a table:
  <th> Slide 2</th>
  </tr>
  <tr>
-  <td> <a href="example/MyDesk_Slide1.png">
-       <img width="352" height="264" src="example/MyDesk_Slide1.png">
+  <td> <a href="example/MyDeck_Slide1.png">
+       <img width="352" height="264" src="example/MyDeck_Slide1.png">
        </a>
-  <td> <a href="example/MyDesk_Slide2.png">
-       <img width="352" height="264" src="example/MyDesk_Slide2.png">
+  <td> <a href="example/MyDeck_Slide2.png">
+       <img width="352" height="264" src="example/MyDeck_Slide2.png">
        </a>
  </tr>
 </table>
@@ -268,11 +268,11 @@ whose slides now look like this:
  <th> Slide 2</th>
  </tr>
  <tr>
-  <td> <a href="example/MyDesk_Translated_Slide1.png">
-       <img width="352" height="264" src="example/MyDesk_Translated_Slide1.png">
+  <td> <a href="example/MyDeck_Translated_Slide1.png">
+       <img width="352" height="264" src="example/MyDeck_Translated_Slide1.png">
        </a>
-  <td> <a href="example/MyDesk_Translated_Slide2.png">
-       <img width="352" height="264" src="example/MyDesk_Translated_Slide2.png">
+  <td> <a href="example/MyDeck_Translated_Slide2.png">
+       <img width="352" height="264" src="example/MyDeck_Translated_Slide2.png">
        </a>
  </tr>
 </table>
