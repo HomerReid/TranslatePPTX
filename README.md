@@ -180,7 +180,7 @@ appears
  + again split into three pieces with indices
    `(M,N)=(3,1) (3,2) (3,3)`.
 
-This is discussed in more detail [below](README.md#ShapesRuns)
+This is discussed in more detail [below](README.md#ShapesRuns).
 
 ### Step 2: Edit text strings
 
