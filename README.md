@@ -2,7 +2,7 @@
 
 TranslatePPTX
 is a very simple code based on the
-[Apache POI](https://poi.apache.org)
+[Apache POI](https://poi.apache.org) package
 for facilitating editing or translation of Powerpoint
 presentations in `.pptx` format.
 
@@ -57,7 +57,7 @@ and a table:
 ### Step 1: Extract text strings
 
 ````bash
- % TranslatePPT MyDeck.pptx
+ % TranslatePPTX.sh MyDeck.pptx
 
 Wrote 8 text strings to MyDeck.text
  (9 text runs, 9 table entries)
@@ -252,7 +252,7 @@ the new command-line argument `--Translations`
 used to specify the list of revised text strings:
 
 ````bash
- % java TranslatePPT MyDeck.pptx --Translations MyDeck.translations
+ % java TranslatePPTX.sh MyDeck.pptx --Translations MyDeck.translations
 Wrote translated document to MyDeck_Translated.pptx.
 Thank you for your support.
 ````
