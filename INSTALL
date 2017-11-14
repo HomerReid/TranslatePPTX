@@ -1,0 +1,19 @@
+Installation instructions for TranslatePPTX
+
+0. You will need Java 1.8 and the Apache POI source distribution.
+   Set environment variable POIHOME to the root of your POI source tree.
+
+1. Copy the `TranslatePPTX.java` file to the appropriate place in the POI tree:
+
+% cp src/TranslatePPTX.java ${POIHOME}/src/ooxml/java/org/apache/poi/xslf/extractor
+
+2. (Re)build POI:
+
+% cd ${POIHOME}
+% ant jar
+
+3. Now you can use the `TranslatePPTX.sh` script to run TranslatePPTX, e.g.
+
+% TranslatePPTX.sh MyDeck.pptx
+
+% TranslatePPTX.sh MyDeck.pptx --Translations MyDeck.translations

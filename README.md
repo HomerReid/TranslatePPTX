@@ -301,8 +301,8 @@ The additional options here are:
     Requests that TranslatePPTX write a `.log` file explaining what is doing.
     This is useful for debugging.
 
-+ `--Wide`
-
++ `--WideOnly`
+    Requests that only text strings containing double-byte characters (i.e. characters in Japanese, Chinese, or other languages) be considered. 
 <a name="ShapesRuns"></a>
 ## Text shapes vs. text runs
 
@@ -329,3 +329,31 @@ Thus, if you need to preserve the formatting or positioning of individual
 text runs, delete `TEXT_STRING N 0` and edit one or more of the `TEXT_STRING N M` sections
 for the individual runs. (You may also simply clear out the text of one of the text runs, in which case TranslatePPTX will *delete* that text run when it constructs the translated `.pptx` file.)
 Otherwise, edit the full string reported for `TEXT_STRING N 0` and delete all of the individual `TEXT_STRING N M` sections.
+
+## Installation
+
+### Install requisite packages
+
+You will need Java version 1.8 and the [Apache POI](https://poi.apache.org) source distribution.
+
+### Building TranslatePPTX
+
+Eventually this project needs a `build.xml` file in its top-level directory
+to drive the `ant` build process. Since I don't know how to write one, for the time
+being I use the following simple procedure which works fine in practice:
+
+1. Copy the `src/TranslatePPTX.java` from the TranslatePPTX repository into the `src/ooxml/java/org/apache/poi/xslf/extractor` subdirectory of your Apache POI installation. Thus, assuming the environment variable POIHOME points to the root of your POI installation, from the head of the TranslatePPTX repository simply say 
+
+````bash
+% cp ${TRANSLATEPPTX}/src/TranslatePPTX.java ${POIHOME}/src/ooxml/java/org/apache/poi/xslf/extractor
+````
+2. Now just (re-)build the POI tree in the usual way, which for me is simply to say `ant jar`:
+
+````bash
+% cd ${POIHOME}
+% ant jar
+````
+
+The first time you build POI from source, it takes a long time (half an hour or so), but subsequently rebuilding after adding `TranslatePPTX.java` only takes about a minute.
+
+3. Now you can run `TranslatePPTX` from 
