@@ -358,4 +358,4 @@ being I use the following simple procedure which works fine in practice:
 
 The first time you build POI from source, it takes a long time (half an hour or so), but subsequently rebuilding after adding `TranslatePPTX.java` only takes about a minute.
 
-3. Now you can run `TranslatePPTX` from 
+3. Now you can run the little shell script [`TranslatePPTX.sh`](TranslatePPTX.sh) that comes with the TranslatePPTX distribution; this just sets some environment variables and runs `TranslatePPTX` in Java.
