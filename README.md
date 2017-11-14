@@ -1,19 +1,18 @@
 # TranslatePPTX
 
-<span style="text-transform: uppercase; font-size: 70%;">translatepptx</span>
+TranslatePPTX
 is a very simple code based on the
 [Apache POI](https://poi.apache.org)
 for facilitating editing or translation of Powerpoint
 presentations in `.pptx` format.
 
 Using
-<span style="text-transform: uppercase; font-size: 70%;">translatepptx</span>
+TranslatePPTX
 to edit or translate a Powerpoint file is a three-step process:
 
-1. You do a first run of
-   <span style="text-transform: uppercase; font-size: 70%;">translatepptx</span>
+1. You do a first run of TranslatePPTX
    on your `.pptx` file in *text extraction* mode.
-   <span style="text-transform: uppercase; font-size: 70%;">translatepptx</span>
+   TranslatePPTX
    extracts all text strings on all slides in the presentation 
    (including all text boxes, all text in graphs, etc.) and 
    writes these out, with some identifying labeling info,
@@ -25,7 +24,7 @@ to edit or translate a Powerpoint file is a three-step process:
 
 3.  Finally, you pass your edited list of text strings as a
     command-line argument to a second run of
-    <span STYLE="font-variant: small-caps;">translatepptx</span>,
+    TranslatePPTX
     now running in *text replacement* mode;
     this time the code replaces all the strings you edited with 
     your edited versions and writes out a new `.pptx` file
@@ -42,6 +41,10 @@ and a table:
 
 <table>
  <tr>
+ <th> Slide 1</th>
+ <th> Slide 2</th>
+ </tr>
+ <tr>
   <td> <a href="example/MyDesk_Slide1.png">
        <img width="352" height="264" src="example/MyDesk_Slide1.png">
        </a>
@@ -54,7 +57,11 @@ and a table:
 ### Step 1: Extract text strings
 
 ````bash
- % java TranslatePPT MyDeck.pptx
+ % TranslatePPT MyDeck.pptx
+
+Wrote 8 text strings to MyDeck.text
+ (9 text runs, 9 table entries)
+Thank you for your support.
 ````
 
 This produces a file named `MyDeck.text,`
@@ -62,7 +69,7 @@ which looks like this:
 
 ````
 --------------------------------------------------
-## Slide 1:Homer’s Deck
+## Slide 1: Homer’s Deck
 --------------------------------------------------
 
 TEXT_STRING 2 0
@@ -102,7 +109,7 @@ TEXT_STRING 4 0
 ==================================================
 
 --------------------------------------------------
-## Slide 2:Slide with graph
+## Slide 2: Slide with graph
 --------------------------------------------------
 
 TEXT_STRING 7 0 (table)
@@ -170,8 +177,10 @@ appears
 
  + once in full with indices `(M,N)=(3,0),` and
 
- + a second time split into three pieces with indices
+ + again split into three pieces with indices
    `(M,N)=(3,1) (3,2) (3,3)`.
+
+This is discussed in more detail [below](README.md#ShapesRuns)
 
 ### Step 2: Edit text strings
 
@@ -181,26 +190,142 @@ the ones you don't. (Or you can just leave them there
 to be re-written as-is to the output file, although this
 will slow things down for huge files.)
 
-After I've finished making my edits, the `MyDeck.text`
+In this case, I will copy `MyDeck.text` to a new file called
+`MyDeck.translations` and make edits to just a few of the 
+text strings; after I've finished making my edits, the `MyDeck.translations`
 file looks like this:
 
 ````bash
+
+TEXT_STRING 2 0
+==================================================
+This is a wonderful text box.
+==================================================
+
+TEXT_STRING 3 3
+==================================================
+and awesome comic italics
+==================================================
+
+TEXT_STRING 5 0
+==================================================
+This was previously Japanese!
+==================================================
+
+TEXT_STRING 4 0
+==================================================
+I was previously Mandarin!
+==================================================
+
+TEXT_STRING 6 1
+==================================================
+Homer's Translated Deck
+==================================================
+
+TEXT_STRING 6 2
+==================================================
+
+==================================================
+
+
+--------------------------------------------------
+## Slide 2:Slide with graph
+--------------------------------------------------
+
+TEXT_STRING 12 0 (table)
+==================================================
+Cello suite in C Minor, BWV 1011, Courante
+==================================================
+
+TEXT_STRING 15 0 (table)
+==================================================
+K. 448 Sonata for four hands
+==================================================
  
 ````
 
 ### Step 3: Replace text strings
 
-Finally, you do a second run of 
-<span style="text-transform: uppercase; font-size: 70%;">translatepptx</span>
-with the same `.pptx` file but now with
-the new command-line argument `--Translations MyDeck.text`
-to specify my list of revised text strings:
+Finally, you do a second run of TranslatePPTX
+with the same `.pptx` file but now using
+the new command-line argument `--Translations`
+used to specify the list of revised text strings:
 
 ````bash
- % java TranslatePPT MyDeck.pptx --Translations MyDeck.text
+ % java TranslatePPT MyDeck.pptx --Translations MyDeck.translations
+Wrote translated document to MyDeck_Translated.pptx.
+Thank you for your support.
 ````
 
-This produces a new `.pptx` file called `MyDeck_Translated.pptx:`
+This produces a new `.pptx` file called `MyDeck_Translated.pptx,`
+whose slides now look like this:
+
+<p align="center">
+
+<table>
+ <tr>
+ <th> Slide 1</th>
+ <th> Slide 2</th>
+ </tr>
+ <tr>
+  <td> <a href="example/MyDesk_Translated_Slide1.png">
+       <img width="352" height="264" src="example/MyDesk_Translated_Slide1.png">
+       </a>
+  <td> <a href="example/MyDesk_Translated_Slide2.png">
+       <img width="352" height="264" src="example/MyDesk_Translated_Slide2.png">
+       </a>
+ </tr>
+</table>
+
+<a name="CommandLineOptions"></a>
+## Other command-line options
+
+There are a couple of other command-line options, which you can
+see by running `TranslatePPTX` with no options:
 
 ````
+% TranslatePPTX
+
+usage: TranslatePPTX Original.pptx [options]
+
+ options: 
+  --Translations Translations.txt
+  --WriteLog
+  --WideOnly
+
 ````
+
+The additional options here are:
+
++ `--WriteLog`
+    Requests that TranslatePPTX write a `.log` file explaining what is doing.
+    This is useful for debugging.
+
++ `--Wide`
+
+<a name="ShapesRuns"></a>
+## Text shapes vs. text runs
+
+As noted above, some text strings in `.pptx` files
+appear *twice* within the the `.text` file produced by TranslatePPTX
+What's going on here is that PowerPoint internally distinguishes
+between *text shapes* and *text runs.* Text shapes are larger-scale
+entities that consist of one or more text runs. Each text run
+has a fixed font size and color.
+In most cases, it is convenient to edit entire text shapes all at
+once; however, for cases in which a single text shape
+includes multiple distinct fonts/colors, you will want to 
+edit the individual text runs to preserve that fine-grained detail.
+
+TranslatePPTX allows for both of these possibilities. For the Nth
+text shape in your `.pptx` file, the `.text` file includes
+
+ +one `TEXT_STRING` with indices `N 0` containing the full text of the shape (including the contributions of all text runs), and
+
+ +separate `TEXT_STRING`s with indices `N 1`, `N 2`, ..., `N M` (where `M` is the total number of text runs in the shape).
+
+You will want to edit *either* the former *or* the latter of these and *delete* the other one.
+Thus, if you need to preserve the formatting or positioning of individual
+text runs, delete `TEXT_STRING N 0` and edit one or more of the `TEXT_STRING N M` sections
+for the individual runs. (You may also simply clear out the text of one of the text runs, in which case TranslatePPTX will *delete* that text run when it constructs the translated `.pptx` file.)
+Otherwise, edit the full string reported for `TEXT_STRING N 0` and delete all of the individual `TEXT_STRING N M` sections.

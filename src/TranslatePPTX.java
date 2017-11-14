@@ -74,6 +74,9 @@ public class TranslatePPTX extends POIXMLTextExtractor {
         public static boolean WideOnly=false;
         public static FileWriter LogFile=null;
         public static FileWriter TextFile=null;
+        public static int TotalTextShapes=0;
+        public static int TotalTextRuns=0;
+        public static int TotalTableEntries=0;
 
 	private XMLSlideShow slideshow;
 	private boolean slidesByDefault = true;
@@ -92,12 +95,13 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 	}
 
 	public static void Usage()
-         { System.err.println("usage: TranslatePPTX Original.pptx [options]");
-	   System.err.println(" options: ");
+         { System.err.println("\nusage: TranslatePPTX Original.pptx [options]\n");
+	   System.err.println(" options: \n");
 	   System.err.println("  --Translations Translations.txt");
 	   System.err.println("  --WriteLog");
 	   System.err.println("  --WideOnly");
 	   System.err.println("  --Verbose");
+	   System.err.println("\n");
            System.exit(1);
          }
 
@@ -260,7 +264,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 
            if (Mode==ModeValue.EXTRACT)
             { TextFile.close();
-              System.out.println("Wrote text strings to " + FileBase + ".text");
+              System.out.println("Wrote " + TotalTextShapes + " text strings to " + FileBase + ".text");
+              System.out.println(" (" + TotalTextRuns + " text runs, " + TotalTableEntries + " table entries)");
             };
 
            /***************************************************************/
@@ -281,7 +286,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
             }
 
 	   ppt.close();
-           System.out.println("Thank you for your support.\n");
+           System.out.println("Thank you for your support.");
 	}
 
 	/**
@@ -341,7 +346,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
           
           PrintLn(TextFile,"\n");
           PrintLn(TextFile,"--------------------------------------------------");
-          PrintLn(TextFile,"## Slide " + nSlide + ":" + slide.getTitle());
+          PrintLn(TextFile,"## Slide " + nSlide + ": " + slide.getTitle());
           PrintLn(TextFile,"--------------------------------------------------");
 
           if (Verbose)
@@ -452,6 +457,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
               continue;
 
              nText++;
+             TotalTextShapes++;
 
              double OldHeight = ts.getTextHeight();
              boolean Changed  = false;
@@ -466,11 +472,11 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                 PrintLn(TextFile,TEXT_SEPARATOR + "\n");
               }
              else if (Translations.containsKey(Key))
-              { ts.setText(Translations.get(Key) );
+              { if (LogFile!=null)
+                 PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
+                ts.setText(Translations.get(Key) );
                 Translations.remove(Key);
                 Changed = true;
-                if (LogFile!=null)
-                 PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
               };
 
              int nRun=0;
@@ -479,6 +485,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                 for(XSLFTextRun run : para)
                  { 
                    nRun++;
+                   TotalTextRuns++;
                    Key.setSize(nText, nRun);
 
                    if ( Mode==ModeValue.EXTRACT )
@@ -491,12 +498,14 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                    else if (Translations.containsKey(Key))
                     { String NewText = Translations.get(Key);
                       if ( NewText.trim().length()==0 )
-                       { EmptyTextRuns.add(run);
+                       { 
                          PrintLn(LogFile," ** Removing (" + Key.width + "," + Key.height + ")");
+                         EmptyTextRuns.add(run);
                        }
                       else
-                       { run.setText(NewText);
+                       { 
                          PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
+                         run.setText(NewText);
                        }
                       Translations.remove(Key);
                       Changed = true;
@@ -523,6 +532,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                   continue;
 
                  nText++;
+                 TotalTableEntries++;
                  Dimension Key = new Dimension();
                  Key.setSize(nText, 0);
                  if (Mode==ModeValue.EXTRACT)
