@@ -347,7 +347,7 @@ being I use the following simple procedure which works fine in practice:
 1. Copy the `src/TranslatePPTX.java` from the TranslatePPTX repository into the `src/ooxml/java/org/apache/poi/xslf/extractor` subdirectory of your Apache POI installation. Thus, assuming the environment variable POIHOME points to the root of your POI installation, from the head of the TranslatePPTX repository simply say 
 
 ````bash
-% cp ${TRANSLATEPPTX}/src/TranslatePPTX.java ${POIHOME}/src/ooxml/java/org/apache/poi/xslf/extractor
+% cp src/TranslatePPTX.java ${POIHOME}/src/ooxml/java/org/apache/poi/xslf/extractor
 ````
 2. Now just (re-)build the POI tree in the usual way, which for me is simply to say `ant jar`:
 
