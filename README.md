@@ -1,14 +1,11 @@
 # TranslatePPTX
 
-TranslatePPTX
-is a very simple code based on the
+TranslatePPTX is a very simple code based on the
 [Apache POI](https://poi.apache.org) package
 for facilitating editing or translation of Powerpoint
 presentations in `.pptx` format.
 
-Using
-TranslatePPTX
-to edit or translate a Powerpoint file is a three-step process:
+Using TranslatePPTX to edit or translate a Powerpoint file is a three-step process:
 
 1. You do a first run of TranslatePPTX
    on your `.pptx` file in *text extraction* mode.
@@ -290,20 +287,39 @@ usage: TranslatePPTX Original.pptx [options]
 
  options: 
   --Translations Translations.txt
-  --WriteLog
   --WideOnly
-
+  --OmitRuns 
+  --Autosize
+  --WriteFormats 
+  --Verbose
+  --WriteLog
 ````
 
 The additional options here are:
 
++ `--WideOnly`
+
+    + Requests that only text strings containing double-byte characters (i.e. characters in Japanese, Chinese, or other languages) be considered.
+
++ `--OmitRuns`
+
+    + Requests that the `.text` output file omit separate lines for text runs, retaining only lines for text shapes. (See [below](#ShapesRuns) for more on this distinction.)
+
++ `--Autosize`
+
+    + Requests that TranslatePPTX attempt to rescale text font sizes to preserve the size of text boxes.
+
++ `--WriteFormats`
+
+    + Requests that TranslatePPTX write formatting information (font, font size, font color, URL addresses, bold, italic, etc.) for text runs to the `.text` output file.
+
++ `--Verbose`
+
+    + Requests more verbose console output.
+
 + `--WriteLog`
 
     + Requests that TranslatePPTX write a `.log` file explaining what is doing.  This is useful for debugging.
-
-+ `--WideOnly`
-
-    + Requests that only text strings containing double-byte characters (i.e. characters in Japanese, Chinese, or other languages) be considered. 
 
 <a name="ShapesRuns"></a>
 ## Text shapes vs. text runs
@@ -322,15 +338,37 @@ edit the individual text runs to preserve that fine-grained detail.
 TranslatePPTX allows for both of these possibilities. For the Nth
 text shape in your `.pptx` file, the `.text` file includes
 
- +one `TEXT_STRING` with indices `N 0` containing the full text of the shape (including the contributions of all text runs), and
++ one `TEXT_STRING` with indices `N 0` containing the full text of the shape (including the contributions of all text runs), and
 
- +separate `TEXT_STRING`s with indices `N 1`, `N 2`, ..., `N M` (where `M` is the total number of text runs in the shape).
++ separate `TEXT_STRING`s with indices `N 1`, `N 2`, ..., `N M` (where `M` is the total number of text runs in the shape).
 
 You will want to edit *either* the former *or* the latter of these and *delete* the other one.
 Thus, if you need to preserve the formatting or positioning of individual
 text runs, delete `TEXT_STRING N 0` and edit one or more of the `TEXT_STRING N M` sections
 for the individual runs. (You may also simply clear out the text of one of the text runs, in which case TranslatePPTX will *delete* that text run when it constructs the translated `.pptx` file.)
 Otherwise, edit the full string reported for `TEXT_STRING N 0` and delete all of the individual `TEXT_STRING N M` sections.
+
+If you only ever want to modify text at the level of shapes and never need the finer
+granularity of runs, you can use the command-line argument `--OmitRuns` to exclude
+the separate information on text runs from the `.text` output file.
+
+<a name="TextFormatting"></a>
+## Text formatting
+
+If you want to change the formatting (font, size, color, etc.) of text, you
+can append one or more format specifiers to the `TEXT_STRING NT NR` line.
+Here are some examples:
+
+```
+TEXT_STRING 10 0 SIZE 14
+TEXT_STRING 54 3 BOLD
+TEXT_STRING 82 0 ITALIC
+TEXT_STRING 72 8 URL https://www.amazon.com
+TEXT_STRING 71 3 COLOR 255_0_0 ITALIC SIZE 10
+```
+
+The argument to `COLOR` is a string of the form `RR_GG_BB` where `RR, GG, BB` are
+integers between 0 and 255.
 
 ## Installation
 

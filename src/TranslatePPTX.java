@@ -18,6 +18,8 @@ package org.apache.poi.xslf.extractor;
 
 import java.io.IOException;
 import java.awt.Dimension;
+import java.awt.Color;
+import java.awt.Paint;
 import java.awt.geom.Rectangle2D;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -34,9 +36,14 @@ import java.lang.Enum;
 import org.apache.poi.POIXMLTextExtractor;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.sl.draw.DrawPaint;
+import org.apache.poi.sl.usermodel.PaintStyle;
+import org.apache.poi.sl.usermodel.PaintStyle.SolidPaint;
+import org.apache.poi.sl.usermodel.ColorStyle;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFCommentAuthors;
 import org.apache.poi.xslf.usermodel.XSLFComments;
+import org.apache.poi.xslf.usermodel.XSLFHyperlink;
 import org.apache.poi.xslf.usermodel.XSLFNotes;
 import org.apache.poi.xslf.usermodel.XSLFRelation;
 import org.apache.poi.xslf.usermodel.XSLFShape;
@@ -54,7 +61,7 @@ import org.apache.poi.xslf.usermodel.XSLFTextShape;
 import org.apache.xmlbeans.XmlException;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTComment;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTCommentAuthor;
-
+import org.openxmlformats.schemas.drawingml.x2006.main.CTTextCharacterProperties;
 
 public class TranslatePPTX extends POIXMLTextExtractor {
    public static final XSLFRelation[] SUPPORTED_TYPES = new XSLFRelation[] {
@@ -70,13 +77,19 @@ public class TranslatePPTX extends POIXMLTextExtractor {
         public static final String TEXT_KEYWORD = "TEXT_STRING";
         public static final String TEXT_SEPARATOR = "==================================================";
         public static final Map <Dimension, String> Translations = new HashMap<Dimension, String>();
+        public static final Map <Dimension, String> Formats = new HashMap<Dimension, String>();
         public static boolean Verbose=false;
+        public static boolean Autosize=false;
         public static boolean WideOnly=false;
+        public static boolean WriteFormats=false;
+        public static boolean OmitRuns=false;
         public static FileWriter LogFile=null;
         public static FileWriter TextFile=null;
         public static int TotalTextShapes=0;
         public static int TotalTextRuns=0;
         public static int TotalTableEntries=0;
+        public static int TextShapesReplaced=0;
+        public static int TextRunsReplaced=0;
 
 	private XMLSlideShow slideshow;
 	private boolean slidesByDefault = true;
@@ -98,9 +111,12 @@ public class TranslatePPTX extends POIXMLTextExtractor {
          { System.err.println("\nusage: TranslatePPTX Original.pptx [options]\n");
 	   System.err.println(" options: \n");
 	   System.err.println("  --Translations Translations.txt");
-	   System.err.println("  --WriteLog");
 	   System.err.println("  --WideOnly");
+	   System.err.println("  --OmitRuns");
+	   System.err.println("  --Autosize");
+	   System.err.println("  --WriteFormats");
 	   System.err.println("  --Verbose");
+	   System.err.println("  --WriteLog");
 	   System.err.println("\n");
            System.exit(1);
          }
@@ -154,11 +170,20 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                        KeyPrime.height=0;
                        if (Translations.containsKey(KeyPrime))
                         ErrExit(FileName + ":" + LineNum + ":" + "Key(" + Key.width + "," + Key.height + ") conflicts with existing (" + Key.width + ",0)");
-                     }
+                     };
+
+                    // record format strings if any 
+                    if (Tokens.length > 3)
+                     { String Format = new String(Tokens[3]);
+                       for(int nt=4; nt<Tokens.length; nt++)
+                        Format = Format + " " + Tokens[nt];
+                       Formats.put(Key, Format);
+                     };
 
                     // next line must be text separator
-                    if ( ! br.readLine().equals(TEXT_SEPARATOR) )
-                     ErrExit(FileName + ":" + LineNum + ":" + "expected separator string (=================)");
+                    Line=br.readLine();
+                    if ( Line==null || !Line.equals(TEXT_SEPARATOR) )
+                     ErrExit(FileName + ":" + LineNum + ":" + "expected separator string (=================), got " + Line);
                     LineNum++;
 
                     String NewText="";
@@ -194,18 +219,21 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                }
          };
 
-	public static void PrintLn(FileWriter f, String s)
+	public static void Print(FileWriter f, String s)
 	 {  
            if (f==null) return;
            try 
             { 
-               f.write(s + "\n");
+               f.write(s);
                f.flush();
             }
            catch(Exception e) 
             {
             }
          }
+
+	public static void PrintLn(FileWriter f, String s)
+	 { Print(f,s + "\n"); }
 
 	public static void main(String[] args) throws Exception 
          {
@@ -240,6 +268,10 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                WriteLog=true;
               else if ( args[narg].equalsIgnoreCase("--WideOnly") )
                WideOnly=true;
+              else if ( args[narg].equalsIgnoreCase("--WriteFormats") )
+               WriteFormats=true;
+              else if ( args[narg].equalsIgnoreCase("--OmitRuns") )
+               OmitRuns=true;
               else if ( args[narg].equalsIgnoreCase("--Translations") )
                { Mode=ModeValue.TRANSLATE;
                  ReadTranslations(args[narg+1]);
@@ -273,6 +305,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
            /***************************************************************/
            if (Mode==ModeValue.TRANSLATE)
             { 
+              System.out.println("Replaced " + TextShapesReplaced + " text shapes, " + TextRunsReplaced + " text runs");
+
               String OutFileName = new String(FileBase + "_Translated.pptx");
               try (FileOutputStream OutFile = new FileOutputStream(OutFileName) )
                {
@@ -350,10 +384,25 @@ public class TranslatePPTX extends POIXMLTextExtractor {
           PrintLn(TextFile,"--------------------------------------------------");
 
           if (Verbose)
-           System.out.println(" Handling slide " + nSlide);
+           System.out.print(" Slide " + nSlide + ": ");
 
           StringBuilder SlideText = new StringBuilder();
+          int TTS = TotalTextShapes;
+          int TSR = TextShapesReplaced;
+          int TRR = TextRunsReplaced;
           SlideText.append(getText(slide, slideText, notesText, masterText));
+          TTS = TotalTextShapes - TTS;
+          TSR = TextShapesReplaced - TSR;
+          TRR = TextRunsReplaced - TRR;
+
+          if (Verbose)
+           { 
+             if (Mode==ModeValue.EXTRACT )
+               System.out.println(" extracted " + TTS + " text shapes ");
+             else // Mode==ModeValue.TRANSLATE
+               System.out.println(" replaced " + TSR + " text shapes, " + TRR + " text runs");
+           }
+
           if (Mode==ModeValue.TRANSLATE && Translations.isEmpty())
            break;
           //System.out.println(SlideText.toString());
@@ -434,6 +483,235 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 
        PrintLn(LogFile, "Key (" + Key.width + "," + Key.height + "): old height " + OldHeight + ", new height was " + NewHeight + ", is " + NewNewHeight);
      }
+
+    private static void Resize2(XSLFTextShape ts, Dimension Key)
+     {
+       PrintLn(LogFile," Trying to resize ( " + Key.width + "," + Key.height + ")...");
+
+       try { 
+             Rectangle2D anchor = ts.getAnchor();
+             double OldWidth  = anchor.getWidth();
+             double OldHeight = anchor.getHeight();
+             PrintLn(LogFile,"   old (" + OldWidth + "," + OldHeight + ")");
+
+             anchor = ts.resizeToFitText();
+             double NewWidth  = anchor.getWidth();
+             double NewHeight = anchor.getHeight();
+             PrintLn(LogFile,"   new (" + NewWidth + "," + NewHeight + ")");
+
+             double WRatio = OldWidth  / NewWidth;
+             double HRatio = OldHeight / NewHeight;
+             double Ratio = (WRatio < HRatio ? WRatio : HRatio);
+             int nRun=0;
+             for(XSLFTextParagraph para : ts.getTextParagraphs() )
+              for(XSLFTextRun run : para)
+               { double OldFS = run.getFontSize();
+                 double NewFS = Ratio * OldFS;
+                 run.setFontSize(NewFS);
+                 double NewFS2 = run.getFontSize();
+                 nRun++;
+                 PrintLn(LogFile,"     run " + nRun + " old, wnew, inew FS = " + OldFS + "," + NewFS + "," + NewFS2);
+               };
+             anchor = ts.resizeToFitText();
+             NewWidth  = anchor.getWidth();
+             NewHeight = anchor.getHeight();
+             PrintLn(LogFile,"    new new (" + NewWidth + "," + NewHeight + ")");
+           } 
+       catch(Exception e)
+           { 
+             PrintLn(LogFile,"** couldn't resize");
+           }
+     }
+
+    public static Color getColor(PaintStyle ps) 
+     {
+       if (!(ps instanceof SolidPaint)) return null;
+       return DrawPaint.applyColorTransform(((SolidPaint)ps).getSolidColor());
+     }
+
+    private static String GetFormat(XSLFTextRun run)
+     { 
+       if (!WriteFormats) return new String("");
+
+       String Format = new String();
+       //PaintStyle ps=run.getFontColor();
+       //SolidPaint sc=ps.getSolidColor();
+       //Color color=sc.getColor();
+       //String ColorString = color.Red() + "_" + color.Green() + "_" + color.Blue;
+       //String ColorString = color.Red() + "_" + color.Green() + "_" + color.Blue;
+       // Format = Format + " color " + getColor(run.getFontColor());
+       //Format = Format + " font " + run.getFontFamily();
+       Format = Format + " size " + run.getFontSize();
+
+       XSLFHyperlink Link = run.getHyperlink();
+       if (Link!=null)
+        Format = Format + " URL " + Link.getAddress();
+
+       if (run.isBold()) 
+        Format=Format + " bold ";
+       if (run.isItalic()) 
+        Format=Format + " italic ";
+
+       return Format;
+     }
+
+    private static void FormatTextRun(XSLFTextRun run, String Format)
+     { String Tokens[] = Format.split(" ");
+       for(int nt=0; nt<Tokens.length; nt++)
+        { if ( Tokens[nt].equalsIgnoreCase("color") )
+           { nt++;
+             //run.setFontColor(DrawPaint.createSolidPaint(Color.getColor(Tokens[nt])));
+             String cc[] = Tokens[nt].split("_");
+             run.setFontColor(new Color(Integer.parseInt(cc[0]), Integer.parseInt(cc[1]), Integer.parseInt(cc[2])));
+           }
+          else if ( Tokens[nt].equalsIgnoreCase("size") )
+           { nt++;
+             run.setFontSize(Double.parseDouble(Tokens[nt]));
+           }
+          else if ( Tokens[nt].equalsIgnoreCase("URL") )
+           { nt++;
+             String URL=Tokens[nt];
+             if (URL.equalsIgnoreCase("none"))
+              { //CTTextCharacterProperties p=run.getRPr(false);
+                //if (p!=null)
+                // p.unsetHlinkClick();
+                //XSLFHyperlink Link=run.getHyperlink();
+                //if (Link!=null)
+                // Link.setAddress(null);
+              }
+             else
+              { XSLFHyperlink Link=run.createHyperlink();
+                Link.setAddress(URL);
+              };
+           }
+          else if ( Tokens[nt].equalsIgnoreCase("URL") )
+           { nt++;
+             run.setFontFamily(Tokens[nt]);
+           }
+          else if ( Tokens[nt].equalsIgnoreCase("bold") )
+           run.setBold(true);
+          else if ( Tokens[nt].equalsIgnoreCase("italic") )
+           run.setItalic(true);
+        };
+     }
+
+    private static void FormatTextShape(XSLFTextShape ts, String Format)
+     { for(XSLFTextParagraph para : ts.getTextParagraphs() )
+        for(XSLFTextRun run : para)
+         FormatTextRun(run, Format);
+     }
+
+    private static boolean HasHyperlink(XSLFTextShape ts)
+     { 
+       for(XSLFTextParagraph para : ts.getTextParagraphs() )
+        for(XSLFTextRun run : para)
+         if (run.getHyperlink() != null)
+          return true;
+
+       return false;
+     }
+
+    private static boolean IsMulticolored(XSLFTextShape ts)
+     { 
+       Color FirstColor=null;
+       for(XSLFTextParagraph para : ts.getTextParagraphs() )
+        for(XSLFTextRun run : para)
+          { Color ThisColor = getColor(run.getFontColor());
+            if (FirstColor==null)
+             FirstColor = ThisColor;
+            else if ( !(FirstColor.equals(ThisColor) ) )
+             return true;
+          }
+       return false;
+     }
+
+    private static void ProcessTextShape(XSLFTextShape ts)
+     {
+       String OldText = ts.getText().toString();
+       if ( WideOnly && !HasWideCharacters(OldText) )
+        return;
+
+       nText++;
+       TotalTextShapes++;
+       Dimension Key = new Dimension();
+       Key.setSize(nText, 0);
+       boolean Changed  = false;
+
+       if ( Mode==ModeValue.EXTRACT )
+        {
+          Print(TextFile,"SHAPE " + TotalTextShapes);
+          if (HasHyperlink(ts))
+           Print(TextFile," HYPERLINK ");
+          if (IsMulticolored(ts))
+           Print(TextFile," MULTICOLORED ");
+          Print(TextFile," \n");
+
+          PrintLn(TextFile,TEXT_KEYWORD + " " + nText + " 0");
+          PrintLn(TextFile,TEXT_SEPARATOR);
+          PrintLn(TextFile,OldText);
+          PrintLn(TextFile,TEXT_SEPARATOR + "\n");
+        }
+       else if (Translations.containsKey(Key))
+        { if (LogFile!=null)
+           PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
+          TextShapesReplaced++; 
+          ts.setText(Translations.get(Key) );
+          if (Formats.containsKey(Key))
+           FormatTextShape(ts, Formats.get(Key));
+          Translations.remove(Key);  
+          Changed = true;
+          if (Mode==ModeValue.TRANSLATE && Changed && Autosize)
+           Resize2(ts, Key);
+          return;
+        };
+
+       if (OmitRuns) return;
+
+       int nRun=0;
+       for(XSLFTextParagraph para : ts.getTextParagraphs() )
+        { List<XSLFTextRun> EmptyTextRuns = new ArrayList<XSLFTextRun>();
+          for(XSLFTextRun run : para)
+           { 
+             nRun++;
+             TotalTextRuns++;
+             Key.setSize(nText, nRun);
+
+             if ( Mode==ModeValue.EXTRACT )
+              { 
+                String Formats = GetFormat(run);
+                PrintLn(TextFile,TEXT_KEYWORD + " " + Key.width + " " + Key.height + Formats);
+                PrintLn(TextFile,TEXT_SEPARATOR);
+                PrintLn(TextFile,run.getRawText().toString());
+                PrintLn(TextFile,TEXT_SEPARATOR + "\n");
+              }
+             else if (Translations.containsKey(Key))
+              { String NewText = Translations.get(Key);
+                if ( NewText==null || NewText.trim().length()==0 )
+                 { 
+                   PrintLn(LogFile," ** Removing (" + Key.width + "," + Key.height + ")");
+                   run.setText("");
+                   EmptyTextRuns.add(run);
+                 }
+                else
+                 { 
+                   PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
+                   TextRunsReplaced++; 
+                   // remove trailing CR from text runs
+                   run.setText(NewText.replace("\n"," ").replace("\r"," "));
+                   if (Formats.containsKey(Key))
+                    FormatTextRun(run, Formats.get(Key));
+                 }
+                Translations.remove(Key);
+                Changed = true;
+              }
+           }
+          para.getTextRuns().removeAll(EmptyTextRuns);
+        };
+
+       if (Mode==ModeValue.TRANSLATE && Changed && Autosize)
+        Resize2(ts, Key);
+
+     }
    
     private static void extractText(XSLFShapeContainer data, boolean skipPlaceholders, StringBuilder text) 
     {
@@ -451,73 +729,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
              if (skipPlaceholders && ts.isPlaceholder())
               continue;
 
-             // Skip strings without Japanese text
-             String OldText = ts.getText().toString();
-             if ( WideOnly && !HasWideCharacters(OldText) )
-              continue;
+            ProcessTextShape(ts);
 
-             nText++;
-             TotalTextShapes++;
-
-             double OldHeight = ts.getTextHeight();
-             boolean Changed  = false;
-             Dimension Key = new Dimension();
-             Key.setSize(nText, 0);
-
-             if ( Mode==ModeValue.EXTRACT )
-              {
-                PrintLn(TextFile,TEXT_KEYWORD + " " + nText + " 0");
-                PrintLn(TextFile,TEXT_SEPARATOR);
-                PrintLn(TextFile,OldText);
-                PrintLn(TextFile,TEXT_SEPARATOR + "\n");
-              }
-             else if (Translations.containsKey(Key))
-              { if (LogFile!=null)
-                 PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
-                ts.setText(Translations.get(Key) );
-                Translations.remove(Key);
-                Changed = true;
-              };
-
-             int nRun=0;
-             for(XSLFTextParagraph para : ts.getTextParagraphs() )
-              { List<XSLFTextRun> EmptyTextRuns = new ArrayList<XSLFTextRun>();
-                for(XSLFTextRun run : para)
-                 { 
-                   nRun++;
-                   TotalTextRuns++;
-                   Key.setSize(nText, nRun);
-
-                   if ( Mode==ModeValue.EXTRACT )
-                    { 
-                      PrintLn(TextFile,TEXT_KEYWORD + " " + Key.width + " " + Key.height);
-                      PrintLn(TextFile,TEXT_SEPARATOR);
-                      PrintLn(TextFile,run.getRawText().toString());
-                      PrintLn(TextFile,TEXT_SEPARATOR + "\n");
-                    }
-                   else if (Translations.containsKey(Key))
-                    { String NewText = Translations.get(Key);
-                      if ( NewText.trim().length()==0 )
-                       { 
-                         PrintLn(LogFile," ** Removing (" + Key.width + "," + Key.height + ")");
-                         EmptyTextRuns.add(run);
-                       }
-                      else
-                       { 
-                         PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
-                         run.setText(NewText);
-                       }
-                      Translations.remove(Key);
-                      Changed = true;
-                    }
-                 }
-                para.getTextRuns().removeAll(EmptyTextRuns);
-             }
-
-             if (Mode==ModeValue.TRANSLATE && Changed)
-              { double NewHeight = ts.getTextHeight();
-                Resize(ts, NewHeight, OldHeight, Key);
-              };
           } 
          else if (s instanceof XSLFTable) 
           {
@@ -527,85 +740,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
              for (XSLFTableRow r : ts) 
               for (XSLFTableCell c : r) 
                { 
-                 String OldText = c.getText().toString();
-                 if ( WideOnly && !HasWideCharacters(OldText) )
-                  continue;
-
-                 nText++;
                  TotalTableEntries++;
-                 Dimension Key = new Dimension();
-                 Key.setSize(nText, 0);
-                 if (Mode==ModeValue.EXTRACT)
-                  { PrintLn(TextFile,"\n" + TEXT_KEYWORD + " " + nText + " " + "0 (table)");
-                    PrintLn(TextFile,TEXT_SEPARATOR);
-                    PrintLn(TextFile,c.getText().toString());
-                    PrintLn(TextFile,TEXT_SEPARATOR + "\n");
-                  }
-                 else if ( Translations.containsKey(Key) )
-                  {
-                    XSLFTextShape cts = (XSLFTextShape)c;
-                    PrintLn(LogFile," ** Replacing (" + Key.width + "," + Key.height + ")");
-
-                    double OldWidth=0.0;
-                    double OldHeight=0.0;
-                    try {
-
-                           Rectangle2D anchor = cts.getAnchor();
-                           OldWidth  = anchor.getWidth();
-                           OldHeight = anchor.getHeight();
-                           PrintLn(LogFile,"    old size (" + OldWidth + "," + OldHeight + ")");
-                        }
-                    catch(Exception e)
-                        {
-                           PrintLn(LogFile,"    failed to get old anchor");
-                        }
-
-                    try {
-                          cts.setText(Translations.get(Key));
-                        }
-                    catch(Exception e) 
-                        { 
-                          System.err.println("** FAILED to replace (" + Key.width + "," + Key.height + ")");
-                          PrintLn(LogFile,"** FAILED to replace (" + Key.width + "," + Key.height + ")");
-                        }
-
-                    Translations.remove(Key);
-
-                    if (OldHeight!=0.0)
-                     { try { 
-                             Rectangle2D anchor = cts.resizeToFitText();
-                             double NewWidth  = anchor.getWidth();
-                             double NewHeight = anchor.getHeight();
-                             PrintLn(LogFile,"    new size (" + NewWidth + "," + NewHeight + ")");
-                             double WRatio = OldWidth  / NewWidth;
-                             double HRatio = OldHeight / NewHeight;
-                             double Ratio = (WRatio < HRatio ? WRatio : HRatio);
-/*
-                             for(XSLFTextParagraph para : cts.getTextParagraphs() )
-                              for(XSLFTextRun run : para)
-                               run.setFontSize(Ratio * run.getFontSize());
-*/
-                             int nRun=0;
-                             for(XSLFTextParagraph para : cts.getTextParagraphs() )
-                              for(XSLFTextRun run : para)
-                               { double OldFS = run.getFontSize();
-                                 double NewFS = Ratio * OldFS;
-                                 run.setFontSize(NewFS);
-                                 double NewFS2 = run.getFontSize();
-                                 nRun++;
-                                 PrintLn(LogFile,"   run " + nRun + " old, wnew, inew FS = " + OldFS + "," + NewFS + "," + NewFS2);
-                               };
-                             anchor = cts.resizeToFitText();
-                             NewWidth  = anchor.getWidth();
-                             NewHeight = anchor.getHeight();
-                             PrintLn(LogFile,"    new new size (" + NewWidth + "," + NewHeight + ")");
-                           }
-                       catch(Exception e)
-                           { 
-                             PrintLn(LogFile,"** couldn't resize");
-                           }
-                     }
-                  }
+                 ProcessTextShape(c);
                }
          } // if (s instance of ...)
 
