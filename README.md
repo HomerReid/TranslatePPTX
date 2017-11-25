@@ -367,8 +367,11 @@ TEXT_STRING 72 8 URL https://www.amazon.com
 TEXT_STRING 71 3 COLOR 255_0_0 ITALIC SIZE 10
 ```
 
-The argument to `COLOR` is a string of the form `RR_GG_BB` where `RR, GG, BB` are
-integers between 0 and 255.
+The argument to `COLOR` is a string of the form `RR_GG_BB` where `RR, GG, BB` are integers between 0 and 255.
+
+Specifying a format for text shapes will apply that format to all text runs in the shape.
+
+You can specify the `--WriteFormats` command-line option to direct `TranslatePPTX` to include formatting information from the original `.pptx` file in the `.text` output file.
 
 ## Installation
 

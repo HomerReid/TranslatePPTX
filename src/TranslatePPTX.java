@@ -37,6 +37,7 @@ import org.apache.poi.POIXMLTextExtractor;
 import org.apache.poi.openxml4j.exceptions.OpenXML4JException;
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.sl.draw.DrawPaint;
+import org.apache.poi.sl.draw.DrawTextParagraph;
 import org.apache.poi.sl.usermodel.PaintStyle;
 import org.apache.poi.sl.usermodel.PaintStyle.SolidPaint;
 import org.apache.poi.sl.usermodel.ColorStyle;
@@ -62,6 +63,16 @@ import org.apache.xmlbeans.XmlException;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTComment;
 import org.openxmlformats.schemas.presentationml.x2006.main.CTCommentAuthor;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTTextCharacterProperties;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTFontCollection;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTFontScheme;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTHyperlink;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTRegularTextRun;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTSchemeColor;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTShapeStyle;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTSolidColorFillProperties;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTTextCharacterProperties;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTTextField;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTTextFont;
 
 public class TranslatePPTX extends POIXMLTextExtractor {
    public static final XSLFRelation[] SUPPORTED_TYPES = new XSLFRelation[] {
@@ -111,6 +122,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
          { System.err.println("\nusage: TranslatePPTX Original.pptx [options]\n");
 	   System.err.println(" options: \n");
 	   System.err.println("  --Translations Translations.txt");
+	   System.err.println("  --OutFile      OutputFile.pptx");
 	   System.err.println("  --WideOnly");
 	   System.err.println("  --OmitRuns");
 	   System.err.println("  --Autosize");
@@ -137,10 +149,17 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 
                  String Line;
                  int LineNum=0;
+                 boolean OverlapsExist=false;
                  while ( (Line = br.readLine()) != null)
                   { 
                     LineNum++;
-                    
+
+                    // 20171123 allow early termination
+                    if (Line.equals("END"))
+{ System.out.println("Breaking early on line " + LineNum);
+                     break;
+}
+
                     // skip if the line is not of the form TEXT_STRING NT NR
                     String Tokens[] = Line.split(" ");
                     if ( !(Tokens[0].equals(TEXT_KEYWORD) ) )
@@ -158,18 +177,19 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                        ErrExit(FileName + ":" + LineNum + ":" + "syntax error");
                      }
 
-                    // sanity checks:
-                    //  (a) key (NT, NR) does not already exist in table
-                    //  (b) for a given NT, *either* (NT,0) *or* (NT,i>0) may exist,
-                    //      but not both (each TextShape is either translated all-at-once
-                    //      *or* by individual TextRuns, but not both
+                    // sanity check: no key exists in table twice
                     if (Translations.containsKey(Key))
                      ErrExit(FileName + ":" + LineNum + ":" + "Key (" + Key.width + "," + Key.height + ") exists twice");
-                    if (Key.height>0)
+
+                    // sanity check: for a given NT, *either* (NT,0) *or* (NT,i>0) may exist,
+                    // but not both (each TextShape is either translated all-at-once or by individual TextRuns)
+                    if (Key.height>=1)
                      { Dimension KeyPrime=new Dimension(Key);
                        KeyPrime.height=0;
                        if (Translations.containsKey(KeyPrime))
-                        ErrExit(FileName + ":" + LineNum + ":" + "Key(" + Key.width + "," + Key.height + ") conflicts with existing (" + Key.width + ",0)");
+                        { OverlapsExist=true;
+                          System.err.println(FileName + ":" + LineNum + ":" + "Key(" + Key.width + "," + Key.height + ") conflicts with existing (" + Key.width + ",0)");
+                        };
                      };
 
                     // record format strings if any 
@@ -211,6 +231,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                   for (Map.Entry<Dimension, String> e : Translations.entrySet())
                    PrintLn(LogFile,"Text (" + e.getKey().width + "," + e.getKey().height + "): " + e.getValue());
                 }
+               if (OverlapsExist)
+                ErrExit(FileName + "overlaps exist ");
 
                }
            catch(IOException e)
@@ -260,6 +282,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
            /** parse command-line arguments *******************************/
            /***************************************************************/
            boolean WriteLog=false;
+           String TextFileName=null, OutputPPTXFileName=null;
            for(int narg=1; narg<args.length; narg++)
             { 
               if ( args[narg].equalsIgnoreCase("--Verbose") )
@@ -277,6 +300,16 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                  ReadTranslations(args[narg+1]);
                  narg+=1;
                } 
+              else if ( args[narg].equalsIgnoreCase("--PPTXOutput") )
+               { 
+                 OutputPPTXFileName = new String(args[narg+1]);
+                 narg+=1;
+               }
+              else if ( args[narg].equalsIgnoreCase("--TextOutput") )
+               { 
+                 TextFileName = new String(args[narg+1]);
+                 narg+=1;
+               }
               else 
                ErrExit("unknown option " + args[narg]);
             };
@@ -288,7 +321,10 @@ public class TranslatePPTX extends POIXMLTextExtractor {
             LogFile = new FileWriter(FileBase + ".log");
 
            if (Mode==ModeValue.EXTRACT)
-            TextFile = new FileWriter(FileBase + ".text");
+            { if (TextFileName==null)
+               TextFileName = new String(FileBase + ".text");
+              TextFile = new FileWriter(TextFileName);
+            };
 
            POIXMLTextExtractor extractor = new TranslatePPTX(ppt);
            extractor.getText();
@@ -307,15 +343,16 @@ public class TranslatePPTX extends POIXMLTextExtractor {
             { 
               System.out.println("Replaced " + TextShapesReplaced + " text shapes, " + TextRunsReplaced + " text runs");
 
-              String OutFileName = new String(FileBase + "_Translated.pptx");
-              try (FileOutputStream OutFile = new FileOutputStream(OutFileName) )
+              if (OutputPPTXFileName == null)
+               OutputPPTXFileName = new String(FileBase + "_Translated.pptx");
+              try (FileOutputStream PPTXFile = new FileOutputStream(OutputPPTXFileName) )
                {
-                 ppt.write(OutFile);
-                 System.out.println("Wrote translated document to " + OutFileName + ".");
+                 ppt.write(PPTXFile);
+                 System.out.println("Wrote translated document to " + OutputPPTXFileName + ".");
                }
               catch(Exception e)
                {
-                 ErrExit("could not write output file " + OutFileName);
+                 ErrExit("could not write output file " + OutputPPTXFileName);
                }
             }
 
@@ -529,18 +566,18 @@ public class TranslatePPTX extends POIXMLTextExtractor {
        return DrawPaint.applyColorTransform(((SolidPaint)ps).getSolidColor());
      }
 
-    private static String GetFormat(XSLFTextRun run)
+    private static String GetTextRunFormat(XSLFTextRun run)
      { 
        if (!WriteFormats) return new String("");
 
        String Format = new String();
-       //PaintStyle ps=run.getFontColor();
-       //SolidPaint sc=ps.getSolidColor();
-       //Color color=sc.getColor();
-       //String ColorString = color.Red() + "_" + color.Green() + "_" + color.Blue;
-       //String ColorString = color.Red() + "_" + color.Green() + "_" + color.Blue;
-       // Format = Format + " color " + getColor(run.getFontColor());
-       //Format = Format + " font " + run.getFontFamily();
+
+       PaintStyle.SolidPaint pssp = (PaintStyle.SolidPaint) run.getFontColor();
+       Color color = DrawPaint.applyColorTransform(pssp.getSolidColor());
+       String ColorString = color.getRed() + "_" + color.getGreen() + "_" + color.getBlue();
+       Format = Format + " color " + ColorString;
+
+       Format = Format + " font " + run.getFontFamily().replaceAll(" ","_");
        Format = Format + " size " + run.getFontSize();
 
        XSLFHyperlink Link = run.getHyperlink();
@@ -555,14 +592,19 @@ public class TranslatePPTX extends POIXMLTextExtractor {
        return Format;
      }
 
-    private static void FormatTextRun(XSLFTextRun run, String Format)
+    private static void SetTextRunFormat(XSLFTextRun run, String Format)
      { String Tokens[] = Format.split(" ");
        for(int nt=0; nt<Tokens.length; nt++)
-        { if ( Tokens[nt].equalsIgnoreCase("color") )
+        { 
+          if ( Tokens[nt].equalsIgnoreCase("color") )
            { nt++;
              //run.setFontColor(DrawPaint.createSolidPaint(Color.getColor(Tokens[nt])));
              String cc[] = Tokens[nt].split("_");
              run.setFontColor(new Color(Integer.parseInt(cc[0]), Integer.parseInt(cc[1]), Integer.parseInt(cc[2])));
+           }
+          else if ( Tokens[nt].equalsIgnoreCase("font") )
+           { nt++;
+             run.setFontFamily(Tokens[nt].replaceAll("_"," "));
            }
           else if ( Tokens[nt].equalsIgnoreCase("size") )
            { nt++;
@@ -595,10 +637,22 @@ public class TranslatePPTX extends POIXMLTextExtractor {
         };
      }
 
-    private static void FormatTextShape(XSLFTextShape ts, String Format)
+    private static void SetTextShapeFormat(XSLFTextShape ts, String Format)
      { for(XSLFTextParagraph para : ts.getTextParagraphs() )
         for(XSLFTextRun run : para)
-         FormatTextRun(run, Format);
+         SetTextRunFormat(run, Format);
+     }
+
+    private static String GetTextShapeFormat(XSLFTextShape ts)
+     { String Format=null;
+       for(XSLFTextParagraph para : ts.getTextParagraphs() )
+        for(XSLFTextRun run : para)
+         { if (Format==null) 
+            Format=GetTextRunFormat(run);
+           else if ( !Format.equalsIgnoreCase(GetTextRunFormat(run)))
+            return null;
+         };
+       return Format;
      }
 
     private static boolean HasHyperlink(XSLFTextShape ts)
@@ -646,7 +700,10 @@ public class TranslatePPTX extends POIXMLTextExtractor {
            Print(TextFile," MULTICOLORED ");
           Print(TextFile," \n");
 
-          PrintLn(TextFile,TEXT_KEYWORD + " " + nText + " 0");
+          String Format=GetTextShapeFormat(ts);
+          if (Format==null) Format="";
+
+          PrintLn(TextFile,TEXT_KEYWORD + " " + nText + " 0" + Format);
           PrintLn(TextFile,TEXT_SEPARATOR);
           PrintLn(TextFile,OldText);
           PrintLn(TextFile,TEXT_SEPARATOR + "\n");
@@ -657,7 +714,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
           TextShapesReplaced++; 
           ts.setText(Translations.get(Key) );
           if (Formats.containsKey(Key))
-           FormatTextShape(ts, Formats.get(Key));
+           SetTextShapeFormat(ts, Formats.get(Key));
           Translations.remove(Key);  
           Changed = true;
           if (Mode==ModeValue.TRANSLATE && Changed && Autosize)
@@ -678,8 +735,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 
              if ( Mode==ModeValue.EXTRACT )
               { 
-                String Formats = GetFormat(run);
-                PrintLn(TextFile,TEXT_KEYWORD + " " + Key.width + " " + Key.height + Formats);
+                String Format = GetTextRunFormat(run);
+                PrintLn(TextFile,TEXT_KEYWORD + " " + Key.width + " " + Key.height + Format);
                 PrintLn(TextFile,TEXT_SEPARATOR);
                 PrintLn(TextFile,run.getRawText().toString());
                 PrintLn(TextFile,TEXT_SEPARATOR + "\n");
@@ -699,7 +756,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                    // remove trailing CR from text runs
                    run.setText(NewText.replace("\n"," ").replace("\r"," "));
                    if (Formats.containsKey(Key))
-                    FormatTextRun(run, Formats.get(Key));
+                    SetTextRunFormat(run, Formats.get(Key));
                  }
                 Translations.remove(Key);
                 Changed = true;
