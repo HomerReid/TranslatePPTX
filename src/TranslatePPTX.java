@@ -92,6 +92,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
         public static boolean Verbose=false;
         public static boolean Autosize=false;
         public static boolean WideOnly=false;
+        public static boolean WriteTwice=false;
         public static boolean WriteFormats=false;
         public static boolean OmitRuns=false;
         public static FileWriter LogFile=null;
@@ -124,6 +125,7 @@ public class TranslatePPTX extends POIXMLTextExtractor {
 	   System.err.println("  --Translations Translations.txt");
 	   System.err.println("  --OutFile      OutputFile.pptx");
 	   System.err.println("  --WideOnly");
+	   System.err.println("  --WriteTwice");
 	   System.err.println("  --OmitRuns");
 	   System.err.println("  --Autosize");
 	   System.err.println("  --WriteFormats");
@@ -291,6 +293,8 @@ public class TranslatePPTX extends POIXMLTextExtractor {
                WriteLog=true;
               else if ( args[narg].equalsIgnoreCase("--WideOnly") )
                WideOnly=true;
+              else if ( args[narg].equalsIgnoreCase("--WriteTwice") )
+               WriteTwice=true;
               else if ( args[narg].equalsIgnoreCase("--WriteFormats") )
                WriteFormats=true;
               else if ( args[narg].equalsIgnoreCase("--OmitRuns") )
@@ -706,6 +710,10 @@ public class TranslatePPTX extends POIXMLTextExtractor {
           PrintLn(TextFile,TEXT_KEYWORD + " " + nText + " 0" + Format);
           PrintLn(TextFile,TEXT_SEPARATOR);
           PrintLn(TextFile,OldText);
+          if (WriteTwice)
+           { PrintLn(TextFile,TEXT_SEPARATOR);
+             PrintLn(TextFile,OldText);
+           };
           PrintLn(TextFile,TEXT_SEPARATOR + "\n");
         }
        else if (Translations.containsKey(Key))
